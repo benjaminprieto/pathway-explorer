@@ -93,10 +93,10 @@ function generateEdges(nodes: ProteinNode[]): PathwayEdge[] {
 
 export function generatePathways(): Pathway[] {
   const clusters: { color: ClusterColor; cx: number; cy: number }[] = [
-    { color: 'teal', cx: 150, cy: 150 },
-    { color: 'blue', cx: 350, cy: 130 },
-    { color: 'orange', cx: 280, cy: 310 },
-    { color: 'purple', cx: 180, cy: 350 },
+    { color: 'teal', cx: 130, cy: 120 },
+    { color: 'blue', cx: 380, cy: 110 },
+    { color: 'orange', cx: 400, cy: 340 },
+    { color: 'purple', cx: 120, cy: 360 },
   ];
 
   return clusters.map(({ color, cx, cy }) => {
