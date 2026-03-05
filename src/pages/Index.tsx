@@ -48,7 +48,7 @@ const Index = () => {
         {rescuedProteins.length > 0 && (
           <div className="ml-auto flex items-center gap-1 text-xs font-mono text-primary">
             <Star className="w-3 h-3" />
-            {rescuedProteins.length} rescatados
+            {rescuedProteins.length} rescued
           </div>
         )}
       </header>
@@ -63,17 +63,7 @@ const Index = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="space-y-6"
               >
-                <div className="text-center space-y-2 mb-8">
-                  <h2 className="text-2xl font-mono font-bold text-gradient-brand">
-                    Red de Pathways
-                  </h2>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Selecciona un cluster de color para explorar la pathway en detalle
-                    e identificar proteínas target o intermediarios.
-                  </p>
-                </div>
                 <NetworkGraph
                   pathways={pathways}
                   onClusterSelect={handleClusterSelect}
@@ -99,7 +89,7 @@ const Index = () => {
             className="border-l border-border bg-card p-4 overflow-auto"
           >
             <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3">
-              Proteínas Rescatadas
+              Rescued Proteins
             </h3>
             <div className="flex flex-col gap-2">
               {rescuedProteins.map(p => (

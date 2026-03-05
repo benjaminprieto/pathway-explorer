@@ -17,8 +17,8 @@ const ROLE_ICONS = {
 
 const ROLE_LABELS = {
   target: 'Target',
-  intermediary: 'Intermediario',
-  effector: 'Efector',
+  intermediary: 'Intermediary',
+  effector: 'Effector',
 };
 
 export default function PathwayDetail({ pathway, onBack, onSelectProtein }: PathwayDetailProps) {
@@ -90,8 +90,8 @@ export default function PathwayDetail({ pathway, onBack, onSelectProtein }: Path
           {/* Layer labels */}
           <div className="absolute left-2 top-0 h-full flex flex-col justify-around text-[10px] font-mono text-muted-foreground pointer-events-none">
             <span className="rotate-[-90deg]">TARGETS</span>
-            <span className="rotate-[-90deg]">INTERMEDIARIOS</span>
-            <span className="rotate-[-90deg]">EFECTORES</span>
+            <span className="rotate-[-90deg]">INTERMEDIARIES</span>
+            <span className="rotate-[-90deg]">EFFECTORS</span>
           </div>
 
           <svg viewBox="0 0 400 400" className="w-full max-w-md mx-auto">
@@ -171,7 +171,7 @@ export default function PathwayDetail({ pathway, onBack, onSelectProtein }: Path
         {/* Protein list / detail panel */}
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-mono text-muted-foreground uppercase tracking-wider">
-            Proteínas ({pathway.nodes.length})
+            Proteins ({pathway.nodes.length})
           </h3>
 
           <AnimatePresence mode="wait">
@@ -241,7 +241,7 @@ function ProteinInfoCard({
       <p className="text-xs text-muted-foreground leading-relaxed">{node.fullName}</p>
       <p className="text-xs text-foreground/60">{node.description}</p>
       <div className="text-[10px] text-muted-foreground font-mono">
-        Conexiones: {node.connections.length}
+        Connections: {node.connections.length}
       </div>
       <button
         onClick={onSelect}
@@ -251,7 +251,7 @@ function ProteinInfoCard({
           color: 'hsl(220, 20%, 6%)',
         }}
       >
-        ★ Rescatar como {node.role === 'target' ? 'Target' : 'Intermediario'}
+        ★ Rescue as {node.role === 'target' ? 'Target' : 'Intermediary'}
       </button>
     </motion.div>
   );
