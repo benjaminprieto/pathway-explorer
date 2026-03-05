@@ -10,7 +10,7 @@ type AppView = 'animation' | 'overview' | 'detail';
 
 const Index = () => {
   const pathways = useMemo(() => generatePathways(), []);
-  const [view, setView] = useState<AppView>('animation');
+  const [view, setView] = useState<AppView>('overview');
   const [selectedCluster, setSelectedCluster] = useState<ClusterColor | null>(null);
   const [rescuedProteins, setRescuedProteins] = useState<ProteinNode[]>([]);
 
@@ -58,23 +58,7 @@ const Index = () => {
         {/* Main content */}
         <main className="flex-1 p-6 overflow-auto">
           <AnimatePresence mode="wait">
-            {view === 'animation' ? (
-              <motion.div
-                key="animation"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center gap-6"
-              >
-                <PathwayAnimation />
-                <button
-                  onClick={() => setView('overview')}
-                  className="px-4 py-2 rounded-lg text-xs font-mono bg-secondary/60 hover:bg-secondary text-foreground transition-colors"
-                >
-                  Explore Pathways →
-                </button>
-              </motion.div>
-            ) : view === 'overview' ? (
+            {view === 'overview' ? (
               <motion.div
                 key="overview"
                 initial={{ opacity: 0 }}
