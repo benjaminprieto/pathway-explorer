@@ -150,10 +150,10 @@ function lerp(a: number, b: number, t: number) {
 
 export default function PathwayAnimation({ cluster = 'orange', onBack }: PathwayAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const NODES = CLUSTER_NODES[cluster];
-  const EDGES = CLUSTER_EDGES[cluster];
-  const TRAVERSAL_ORDER = TRAVERSAL_ORDERS[cluster];
-  const palette = getClusterPalette(cluster);
+  const NODES = useMemo(() => CLUSTER_NODES[cluster], [cluster]);
+  const EDGES = useMemo(() => CLUSTER_EDGES[cluster], [cluster]);
+  const TRAVERSAL_ORDER = useMemo(() => TRAVERSAL_ORDERS[cluster], [cluster]);
+  const palette = useMemo(() => getClusterPalette(cluster), [cluster]);
 
   const shortLabels: Record<ClusterColor, string> = useMemo(() => ({
     teal: 'PI3K / AKT',
@@ -176,7 +176,7 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
     fadeOut: 0,
   });
   const frameRef = useRef(0);
-  const [phase, setPhase] = useState<Phase>('pathway');
+  const [, setPhaseRender] = useState(0);
   const [paused, setPaused] = useState(false);
 
   const reset = useCallback(() => {
@@ -190,7 +190,7 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
     s.litEdges.clear();
     s.targetHighlight = 0;
     s.fadeOut = 0;
-    setPhase('pathway');
+    setPhaseRender(c => c + 1);
   }, []);
 
   const togglePause = useCallback(() => {
@@ -222,7 +222,7 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
     s.litEdges.clear();
     s.targetHighlight = 0;
     s.fadeOut = 0;
-    setPhase('pathway');
+    // no setPhase here — ref tracks it
 
     const draw = (now: number) => {
       const ctx = canvas.getContext('2d');
@@ -264,7 +264,7 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
           sRef.edgeAppear.fill(1);
           sRef.phase = 'traversal';
           sRef.phaseStart = now;
-          setPhase('traversal');
+          // phase tracked in ref only
         }
       } else if (sRef.phase === 'traversal') {
         const idx = t * TRAVERSAL_ORDER.length;
@@ -283,7 +283,7 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
         if (t >= 1) {
           sRef.phase = 'target';
           sRef.phaseStart = now;
-          setPhase('target');
+          // phase tracked in ref only
         }
       } else if (sRef.phase === 'target') {
         sRef.targetHighlight = easeInOutCubic(Math.min(t / 0.3, 1));
@@ -507,7 +507,7 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
 
     frameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [cluster, reset, NODES, EDGES, TRAVERSAL_ORDER, palette, shortLabels]);
+  }, [cluster, NODES, EDGES, TRAVERSAL_ORDER, palette, shortLabels]);
 
   return (
     <div className="relative w-full flex flex-col items-center">
