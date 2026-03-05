@@ -1,6 +1,12 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { ClusterColor, CLUSTER_COLORS, CLUSTER_LABELS } from '@/data/pathwayData';
 
-// ── Hardcoded biologically-plausible WNT/β-catenin-inspired network ──
+interface PathwayAnimationProps {
+  cluster?: ClusterColor;
+  onBack?: () => void;
+}
+
+// ── Hardcoded biologically-plausible network ──
 interface PNode {
   id: number;
   label: string;
@@ -14,55 +20,118 @@ interface PEdge {
   to: number;
 }
 
-const NODES: PNode[] = [
-  { id: 0, label: 'WNT3A', x: 0.12, y: 0.18, role: 'upstream' },
-  { id: 1, label: 'FZD7', x: 0.28, y: 0.12, role: 'upstream' },
-  { id: 2, label: 'LRP6', x: 0.30, y: 0.28, role: 'upstream' },
-  { id: 3, label: 'DVL2', x: 0.45, y: 0.20, role: 'mid' },
-  { id: 4, label: 'AXIN1', x: 0.52, y: 0.38, role: 'mid' },
-  { id: 5, label: 'GSK3β', x: 0.60, y: 0.18, role: 'mid' },
-  { id: 6, label: 'APC', x: 0.55, y: 0.55, role: 'mid' },
-  { id: 7, label: 'CK1α', x: 0.40, y: 0.45, role: 'mid' },
-  { id: 8, label: 'β-CAT', x: 0.72, y: 0.42, role: 'target' },
-  { id: 9, label: 'TCF4', x: 0.85, y: 0.55, role: 'downstream' },
-  { id: 10, label: 'MYC', x: 0.88, y: 0.72, role: 'downstream' },
-  { id: 11, label: 'CCND1', x: 0.75, y: 0.78, role: 'downstream' },
-];
+// Different topologies per cluster
+const CLUSTER_NODES: Record<ClusterColor, PNode[]> = {
+  teal: [
+    { id: 0, label: 'PI3K', x: 0.10, y: 0.20, role: 'upstream' },
+    { id: 1, label: 'PIP3', x: 0.25, y: 0.14, role: 'upstream' },
+    { id: 2, label: 'PDK1', x: 0.22, y: 0.32, role: 'upstream' },
+    { id: 3, label: 'AKT1', x: 0.42, y: 0.22, role: 'mid' },
+    { id: 4, label: 'mTOR', x: 0.55, y: 0.38, role: 'mid' },
+    { id: 5, label: 'TSC2', x: 0.58, y: 0.18, role: 'mid' },
+    { id: 6, label: 'PTEN', x: 0.38, y: 0.48, role: 'mid' },
+    { id: 7, label: 'RHEB', x: 0.50, y: 0.55, role: 'mid' },
+    { id: 8, label: 'S6K1', x: 0.72, y: 0.42, role: 'target' },
+    { id: 9, label: 'FOXO3', x: 0.82, y: 0.58, role: 'downstream' },
+    { id: 10, label: 'BAD', x: 0.88, y: 0.72, role: 'downstream' },
+    { id: 11, label: '4E-BP1', x: 0.75, y: 0.78, role: 'downstream' },
+  ],
+  blue: [
+    { id: 0, label: 'EGF', x: 0.10, y: 0.20, role: 'upstream' },
+    { id: 1, label: 'EGFR', x: 0.22, y: 0.15, role: 'upstream' },
+    { id: 2, label: 'GRB2', x: 0.28, y: 0.30, role: 'upstream' },
+    { id: 3, label: 'SOS1', x: 0.40, y: 0.20, role: 'mid' },
+    { id: 4, label: 'RAS', x: 0.52, y: 0.32, role: 'mid' },
+    { id: 5, label: 'BRAF', x: 0.60, y: 0.18, role: 'mid' },
+    { id: 6, label: 'MEK1', x: 0.55, y: 0.50, role: 'mid' },
+    { id: 7, label: 'RAF1', x: 0.42, y: 0.45, role: 'mid' },
+    { id: 8, label: 'ERK2', x: 0.72, y: 0.40, role: 'target' },
+    { id: 9, label: 'ELK1', x: 0.85, y: 0.55, role: 'downstream' },
+    { id: 10, label: 'MYC', x: 0.88, y: 0.72, role: 'downstream' },
+    { id: 11, label: 'FOS', x: 0.75, y: 0.78, role: 'downstream' },
+  ],
+  orange: [
+    { id: 0, label: 'WNT3A', x: 0.12, y: 0.18, role: 'upstream' },
+    { id: 1, label: 'FZD7', x: 0.28, y: 0.12, role: 'upstream' },
+    { id: 2, label: 'LRP6', x: 0.30, y: 0.28, role: 'upstream' },
+    { id: 3, label: 'DVL2', x: 0.45, y: 0.20, role: 'mid' },
+    { id: 4, label: 'AXIN1', x: 0.52, y: 0.38, role: 'mid' },
+    { id: 5, label: 'GSK3β', x: 0.60, y: 0.18, role: 'mid' },
+    { id: 6, label: 'APC', x: 0.55, y: 0.55, role: 'mid' },
+    { id: 7, label: 'CK1α', x: 0.40, y: 0.45, role: 'mid' },
+    { id: 8, label: 'β-CAT', x: 0.72, y: 0.42, role: 'target' },
+    { id: 9, label: 'TCF4', x: 0.85, y: 0.55, role: 'downstream' },
+    { id: 10, label: 'MYC', x: 0.88, y: 0.72, role: 'downstream' },
+    { id: 11, label: 'CCND1', x: 0.75, y: 0.78, role: 'downstream' },
+  ],
+  purple: [
+    { id: 0, label: 'IFNγ', x: 0.10, y: 0.20, role: 'upstream' },
+    { id: 1, label: 'IFNGR', x: 0.25, y: 0.14, role: 'upstream' },
+    { id: 2, label: 'JAK1', x: 0.28, y: 0.30, role: 'upstream' },
+    { id: 3, label: 'JAK2', x: 0.42, y: 0.22, role: 'mid' },
+    { id: 4, label: 'TYK2', x: 0.55, y: 0.38, role: 'mid' },
+    { id: 5, label: 'SHP2', x: 0.58, y: 0.18, role: 'mid' },
+    { id: 6, label: 'SOCS1', x: 0.48, y: 0.52, role: 'mid' },
+    { id: 7, label: 'PIAS1', x: 0.38, y: 0.45, role: 'mid' },
+    { id: 8, label: 'STAT3', x: 0.72, y: 0.42, role: 'target' },
+    { id: 9, label: 'STAT5', x: 0.85, y: 0.55, role: 'downstream' },
+    { id: 10, label: 'BCL2', x: 0.88, y: 0.72, role: 'downstream' },
+    { id: 11, label: 'CCND1', x: 0.75, y: 0.78, role: 'downstream' },
+  ],
+};
 
-// Directed edges – upstream → downstream, with a feedback loop
-const EDGES: PEdge[] = [
-  { from: 0, to: 1 },
-  { from: 0, to: 2 },
-  { from: 1, to: 3 },
-  { from: 2, to: 3 },
-  { from: 3, to: 4 },
-  { from: 3, to: 5 },
-  { from: 4, to: 6 },
-  { from: 7, to: 4 },
-  { from: 5, to: 8 },
-  { from: 4, to: 8 },
-  { from: 6, to: 8 },
-  { from: 8, to: 9 },
-  { from: 9, to: 10 },
-  { from: 9, to: 11 },
-  // feedback loop
-  { from: 8, to: 5 },
-];
+const CLUSTER_EDGES: Record<ClusterColor, PEdge[]> = {
+  teal: [
+    { from: 0, to: 1 }, { from: 0, to: 2 }, { from: 1, to: 3 }, { from: 2, to: 3 },
+    { from: 3, to: 4 }, { from: 3, to: 5 }, { from: 4, to: 7 }, { from: 6, to: 4 },
+    { from: 5, to: 8 }, { from: 4, to: 8 }, { from: 7, to: 8 }, { from: 8, to: 9 },
+    { from: 9, to: 10 }, { from: 9, to: 11 }, { from: 8, to: 5 },
+  ],
+  blue: [
+    { from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 3 }, { from: 3, to: 4 },
+    { from: 4, to: 5 }, { from: 5, to: 6 }, { from: 7, to: 6 }, { from: 4, to: 7 },
+    { from: 6, to: 8 }, { from: 5, to: 8 }, { from: 8, to: 9 }, { from: 9, to: 10 },
+    { from: 9, to: 11 }, { from: 8, to: 4 },
+  ],
+  orange: [
+    { from: 0, to: 1 }, { from: 0, to: 2 }, { from: 1, to: 3 }, { from: 2, to: 3 },
+    { from: 3, to: 4 }, { from: 3, to: 5 }, { from: 4, to: 6 }, { from: 7, to: 4 },
+    { from: 5, to: 8 }, { from: 4, to: 8 }, { from: 6, to: 8 }, { from: 8, to: 9 },
+    { from: 9, to: 10 }, { from: 9, to: 11 }, { from: 8, to: 5 },
+  ],
+  purple: [
+    { from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 3 }, { from: 3, to: 4 },
+    { from: 4, to: 5 }, { from: 3, to: 6 }, { from: 7, to: 6 }, { from: 4, to: 8 },
+    { from: 5, to: 8 }, { from: 8, to: 9 }, { from: 9, to: 10 }, { from: 9, to: 11 },
+    { from: 8, to: 3 },
+  ],
+};
 
-// Signal traversal order (BFS-ish path through the network)
-const TRAVERSAL_ORDER = [0, 1, 2, 3, 5, 4, 7, 6, 8, 9, 10, 11];
+const TRAVERSAL_ORDERS: Record<ClusterColor, number[]> = {
+  teal: [0, 1, 2, 3, 5, 4, 6, 7, 8, 9, 10, 11],
+  blue: [0, 1, 2, 3, 4, 5, 7, 6, 8, 9, 10, 11],
+  orange: [0, 1, 2, 3, 5, 4, 7, 6, 8, 9, 10, 11],
+  purple: [0, 1, 2, 3, 4, 5, 7, 6, 8, 9, 10, 11],
+};
 
-const TARGET_IDS = [8]; // β-catenin
+const TARGET_ID = 8; // All clusters use id 8 as target
 
-// ── Palette ──
-const TEAL = 'rgba(62,207,178,1)';
-const TEAL_DIM = 'rgba(62,207,178,0.25)';
-const TEAL_GLOW = 'rgba(62,207,178,0.6)';
-const GREY = 'rgba(120,120,130,0.5)';
 const BG = '#000000';
-const FONT = '"DM Sans", sans-serif';
+const FONT = '"DM Sans", "Inter", sans-serif';
+const GREY = 'rgba(120,120,130,0.5)';
 
-// ── Phase config ──
+function getClusterPalette(cluster: ClusterColor) {
+  const hslStr = CLUSTER_COLORS[cluster]; // e.g. 'hsl(170, 80%, 50%)'
+  const match = hslStr.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+  if (!match) return { full: hslStr, dim: 'rgba(120,120,130,0.25)', glow: hslStr };
+  const [, h, s, l] = match;
+  return {
+    full: `hsla(${h}, ${s}%, ${l}%, 1)`,
+    dim: `hsla(${h}, ${s}%, ${l}%, 0.25)`,
+    glow: `hsla(${h}, ${s}%, ${l}%, 0.6)`,
+  };
+}
+
 type Phase = 'pathway' | 'traversal' | 'target';
 const PHASES: { key: Phase; label: string }[] = [
   { key: 'pathway', label: 'Pathway' },
@@ -79,26 +148,31 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-export default function PathwayAnimation() {
+export default function PathwayAnimation({ cluster = 'orange', onBack }: PathwayAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const NODES = CLUSTER_NODES[cluster];
+  const EDGES = CLUSTER_EDGES[cluster];
+  const TRAVERSAL_ORDER = TRAVERSAL_ORDERS[cluster];
+  const palette = getClusterPalette(cluster);
+
+  const shortLabels: Record<ClusterColor, string> = {
+    teal: 'PI3K / AKT',
+    blue: 'MAPK / ERK',
+    orange: 'WNT / β-catenin',
+    purple: 'JAK / STAT',
+  };
+
   const stateRef = useRef({
     phase: 'pathway' as Phase,
     phaseStart: 0,
     paused: false,
     pauseTime: 0,
-    // per-node appearance progress [0-1]
-    nodeAppear: new Float32Array(NODES.length),
-    // per-edge appearance progress [0-1]
-    edgeAppear: new Float32Array(EDGES.length),
-    // traversal progress index (fractional)
+    nodeAppear: new Float32Array(12),
+    edgeAppear: new Float32Array(15),
     traversalIdx: -1,
-    // lit nodes set
     litNodes: new Set<number>(),
-    // lit edges set
     litEdges: new Set<number>(),
-    // target highlight progress [0-1]
     targetHighlight: 0,
-    // fade-out progress for loop restart
     fadeOut: 0,
   });
   const frameRef = useRef(0);
@@ -137,14 +211,24 @@ export default function PathwayAnimation() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    stateRef.current.phaseStart = performance.now();
+    // Reset state for new cluster
+    const s = stateRef.current;
+    s.phase = 'pathway';
+    s.phaseStart = performance.now();
+    s.nodeAppear = new Float32Array(NODES.length);
+    s.edgeAppear = new Float32Array(EDGES.length);
+    s.traversalIdx = -1;
+    s.litNodes.clear();
+    s.litEdges.clear();
+    s.targetHighlight = 0;
+    s.fadeOut = 0;
+    setPhase('pathway');
 
     const draw = (now: number) => {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      const s = stateRef.current;
+      const sRef = stateRef.current;
 
-      // DPR scaling
       const dpr = window.devicePixelRatio || 1;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -154,62 +238,57 @@ export default function PathwayAnimation() {
       }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      if (s.paused) {
+      if (sRef.paused) {
         frameRef.current = requestAnimationFrame(draw);
         return;
       }
 
-      const elapsed = now - s.phaseStart;
-      const dur = PHASE_DURATION[s.phase];
+      const elapsed = now - sRef.phaseStart;
+      const dur = PHASE_DURATION[sRef.phase];
       const t = Math.min(elapsed / dur, 1);
 
       // ── Update state per phase ──
-      if (s.phase === 'pathway') {
-        // Stagger node appearances
+      if (sRef.phase === 'pathway') {
         NODES.forEach((_, i) => {
           const stagger = i / NODES.length;
           const nodeT = Math.max(0, Math.min(1, (t - stagger * 0.6) / 0.4));
-          s.nodeAppear[i] = easeInOutCubic(nodeT);
+          sRef.nodeAppear[i] = easeInOutCubic(nodeT);
         });
-        // Stagger edge appearances (after nodes start showing)
         EDGES.forEach((_, i) => {
           const stagger = i / EDGES.length;
           const edgeT = Math.max(0, Math.min(1, (t - 0.3 - stagger * 0.5) / 0.3));
-          s.edgeAppear[i] = easeInOutCubic(edgeT);
+          sRef.edgeAppear[i] = easeInOutCubic(edgeT);
         });
         if (t >= 1) {
-          s.nodeAppear.fill(1);
-          s.edgeAppear.fill(1);
-          s.phase = 'traversal';
-          s.phaseStart = now;
+          sRef.nodeAppear.fill(1);
+          sRef.edgeAppear.fill(1);
+          sRef.phase = 'traversal';
+          sRef.phaseStart = now;
           setPhase('traversal');
         }
-      } else if (s.phase === 'traversal') {
+      } else if (sRef.phase === 'traversal') {
         const idx = t * TRAVERSAL_ORDER.length;
-        s.traversalIdx = idx;
-        // Light up nodes and connecting edges
+        sRef.traversalIdx = idx;
         const litCount = Math.floor(idx);
-        s.litNodes.clear();
-        s.litEdges.clear();
+        sRef.litNodes.clear();
+        sRef.litEdges.clear();
         for (let i = 0; i <= litCount && i < TRAVERSAL_ORDER.length; i++) {
-          s.litNodes.add(TRAVERSAL_ORDER[i]);
+          sRef.litNodes.add(TRAVERSAL_ORDER[i]);
         }
-        // Light edges whose both endpoints are lit
         EDGES.forEach((e, ei) => {
-          if (s.litNodes.has(e.from) && s.litNodes.has(e.to)) {
-            s.litEdges.add(ei);
+          if (sRef.litNodes.has(e.from) && sRef.litNodes.has(e.to)) {
+            sRef.litEdges.add(ei);
           }
         });
         if (t >= 1) {
-          s.phase = 'target';
-          s.phaseStart = now;
+          sRef.phase = 'target';
+          sRef.phaseStart = now;
           setPhase('target');
         }
-      } else if (s.phase === 'target') {
-        s.targetHighlight = easeInOutCubic(Math.min(t / 0.3, 1));
-        // After hold, fade out and restart
+      } else if (sRef.phase === 'target') {
+        sRef.targetHighlight = easeInOutCubic(Math.min(t / 0.3, 1));
         if (t > 0.85) {
-          s.fadeOut = easeInOutCubic((t - 0.85) / 0.15);
+          sRef.fadeOut = easeInOutCubic((t - 0.85) / 0.15);
         }
         if (t >= 1) {
           reset();
@@ -221,16 +300,15 @@ export default function PathwayAnimation() {
       ctx.fillStyle = BG;
       ctx.fillRect(0, 0, w, h);
 
-      // Map normalized coords to canvas with padding
       const pad = 60;
       const gw = w - pad * 2;
-      const gh = h - pad * 2 - 50; // leave room for step bar
+      const gh = h - pad * 2 - 50;
       const px = (nx: number) => pad + nx * gw;
       const py = (ny: number) => pad + ny * gh;
 
       // Draw edges
       EDGES.forEach((edge, ei) => {
-        const appear = s.edgeAppear[ei];
+        const appear = sRef.edgeAppear[ei];
         if (appear <= 0) return;
 
         const fromNode = NODES[edge.from];
@@ -240,28 +318,27 @@ export default function PathwayAnimation() {
         const x2 = px(toNode.x);
         const y2 = py(toNode.y);
 
-        // Partially draw edge based on appear
         const mx = lerp(x1, x2, appear);
         const my = lerp(y1, y2, appear);
 
-        const isLit = s.litEdges.has(ei);
-        const isTraversalPhase = s.phase === 'traversal' || s.phase === 'target';
+        const isLit = sRef.litEdges.has(ei);
+        const isTraversalPhase = sRef.phase === 'traversal' || sRef.phase === 'target';
 
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(mx, my);
 
         if (isTraversalPhase && isLit) {
-          ctx.strokeStyle = TEAL;
+          ctx.strokeStyle = palette.full;
           ctx.lineWidth = 2;
-          ctx.shadowColor = TEAL;
+          ctx.shadowColor = palette.full;
           ctx.shadowBlur = 8;
         } else if (isTraversalPhase && !isLit) {
           ctx.strokeStyle = GREY;
           ctx.lineWidth = 1;
           ctx.shadowBlur = 0;
         } else {
-          ctx.strokeStyle = TEAL_DIM;
+          ctx.strokeStyle = palette.dim;
           ctx.lineWidth = 1;
           ctx.shadowBlur = 0;
         }
@@ -282,7 +359,7 @@ export default function PathwayAnimation() {
           ctx.lineTo(ax, ay);
           ctx.moveTo(mx, my);
           ctx.lineTo(bx, by);
-          ctx.strokeStyle = isLit && isTraversalPhase ? TEAL : TEAL_DIM;
+          ctx.strokeStyle = isLit && isTraversalPhase ? palette.full : palette.dim;
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
@@ -290,44 +367,42 @@ export default function PathwayAnimation() {
 
       // Draw nodes
       NODES.forEach((node, ni) => {
-        const appear = s.nodeAppear[ni];
+        const appear = sRef.nodeAppear[ni];
         if (appear <= 0) return;
 
         const cx = px(node.x);
         const cy = py(node.y);
-        const isLit = s.litNodes.has(ni);
-        const isTarget = TARGET_IDS.includes(ni);
-        const isTraversalPhase = s.phase === 'traversal' || s.phase === 'target';
+        const isLit = sRef.litNodes.has(ni);
+        const isTarget = ni === TARGET_ID;
+        const isTraversalPhase = sRef.phase === 'traversal' || sRef.phase === 'target';
 
         let radius = 5 * appear;
-        let fillColor = TEAL_DIM;
+        let fillColor = palette.dim;
         let glowAmount = 0;
 
         if (isTraversalPhase) {
-          if (isTarget && s.phase === 'target') {
-            radius = lerp(5, 14, s.targetHighlight);
-            fillColor = TEAL;
-            glowAmount = 25 * s.targetHighlight;
+          if (isTarget && sRef.phase === 'target') {
+            radius = lerp(5, 14, sRef.targetHighlight);
+            fillColor = palette.full;
+            glowAmount = 25 * sRef.targetHighlight;
           } else if (isLit) {
-            // Pulse when just reached
             const nodeOrderIdx = TRAVERSAL_ORDER.indexOf(ni);
-            const pulseT = s.traversalIdx - nodeOrderIdx;
+            const pulseT = sRef.traversalIdx - nodeOrderIdx;
             const pulse = pulseT > 0 && pulseT < 1.5 ? Math.sin(pulseT * Math.PI) * 0.4 : 0;
             radius = 5 + pulse * 4;
-            fillColor = TEAL_GLOW;
+            fillColor = palette.glow;
             glowAmount = 6 + pulse * 10;
           } else {
             fillColor = GREY;
             radius = 4;
           }
         } else {
-          // Pathway phase – all teal
-          fillColor = TEAL_DIM;
+          fillColor = palette.dim;
           radius = 5 * appear;
         }
 
         if (glowAmount > 0) {
-          ctx.shadowColor = TEAL;
+          ctx.shadowColor = palette.full;
           ctx.shadowBlur = glowAmount;
         }
         ctx.beginPath();
@@ -337,73 +412,46 @@ export default function PathwayAnimation() {
         ctx.shadowBlur = 0;
 
         // Target bracket
-        if (isTarget && s.phase === 'target' && s.targetHighlight > 0.3) {
-          const bAlpha = (s.targetHighlight - 0.3) / 0.7;
+        if (isTarget && sRef.phase === 'target' && sRef.targetHighlight > 0.3) {
+          const bAlpha = (sRef.targetHighlight - 0.3) / 0.7;
           const bPad = 22;
           const bLen = 8;
-          ctx.strokeStyle = `rgba(62,207,178,${bAlpha})`;
+          ctx.strokeStyle = palette.full.replace(/[\d.]+\)$/, `${bAlpha})`);
           ctx.lineWidth = 2;
-          // top-left bracket
-          ctx.beginPath();
-          ctx.moveTo(cx - bPad, cy - bPad + bLen);
-          ctx.lineTo(cx - bPad, cy - bPad);
-          ctx.lineTo(cx - bPad + bLen, cy - bPad);
-          ctx.stroke();
-          // top-right
-          ctx.beginPath();
-          ctx.moveTo(cx + bPad - bLen, cy - bPad);
-          ctx.lineTo(cx + bPad, cy - bPad);
-          ctx.lineTo(cx + bPad, cy - bPad + bLen);
-          ctx.stroke();
-          // bottom-left
-          ctx.beginPath();
-          ctx.moveTo(cx - bPad, cy + bPad - bLen);
-          ctx.lineTo(cx - bPad, cy + bPad);
-          ctx.lineTo(cx - bPad + bLen, cy + bPad);
-          ctx.stroke();
-          // bottom-right
-          ctx.beginPath();
-          ctx.moveTo(cx + bPad - bLen, cy + bPad);
-          ctx.lineTo(cx + bPad, cy + bPad);
-          ctx.lineTo(cx + bPad, cy + bPad - bLen);
-          ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx - bPad, cy - bPad + bLen); ctx.lineTo(cx - bPad, cy - bPad); ctx.lineTo(cx - bPad + bLen, cy - bPad); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx + bPad - bLen, cy - bPad); ctx.lineTo(cx + bPad, cy - bPad); ctx.lineTo(cx + bPad, cy - bPad + bLen); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx - bPad, cy + bPad - bLen); ctx.lineTo(cx - bPad, cy + bPad); ctx.lineTo(cx - bPad + bLen, cy + bPad); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx + bPad - bLen, cy + bPad); ctx.lineTo(cx + bPad, cy + bPad); ctx.lineTo(cx + bPad, cy + bPad - bLen); ctx.stroke();
         }
 
         // Label
         const labelAlpha = isTraversalPhase
-          ? isLit || (isTarget && s.phase === 'target') ? 0.9 : 0.25
+          ? isLit || (isTarget && sRef.phase === 'target') ? 0.9 : 0.25
           : appear * 0.6;
         ctx.fillStyle = `rgba(255,255,255,${labelAlpha})`;
-        ctx.font = `${isTarget && s.phase === 'target' ? '11px' : '9px'} ${FONT}`;
+        ctx.font = `${isTarget && sRef.phase === 'target' ? '11px' : '9px'} ${FONT}`;
         ctx.textAlign = 'center';
         ctx.fillText(node.label, cx, cy - radius - 6);
 
         // "Target" label
-        if (isTarget && s.phase === 'target' && s.targetHighlight > 0.5) {
-          const tAlpha = (s.targetHighlight - 0.5) / 0.5;
-          ctx.fillStyle = `rgba(62,207,178,${tAlpha})`;
+        if (isTarget && sRef.phase === 'target' && sRef.targetHighlight > 0.5) {
+          const tAlpha = (sRef.targetHighlight - 0.5) / 0.5;
+          ctx.fillStyle = palette.full.replace(/[\d.]+\)$/, `${tAlpha})`);
           ctx.font = `bold 10px ${FONT}`;
           ctx.fillText('TARGET', cx, cy + radius + 16);
         }
       });
 
       // Pathway title (top-left)
-      if (s.phase === 'pathway') {
-        const titleAlpha = easeInOutCubic(Math.min(t / 0.3, 1));
-        ctx.fillStyle = `rgba(255,255,255,${titleAlpha * 0.7})`;
-        ctx.font = `500 11px ${FONT}`;
-        ctx.textAlign = 'left';
-        ctx.fillText('WNT / β-catenin', pad, pad - 20);
-      } else {
-        ctx.fillStyle = 'rgba(255,255,255,0.4)';
-        ctx.font = `500 11px ${FONT}`;
-        ctx.textAlign = 'left';
-        ctx.fillText('WNT / β-catenin', pad, pad - 20);
-      }
+      const titleAlpha = sRef.phase === 'pathway' ? easeInOutCubic(Math.min(t / 0.3, 1)) * 0.7 : 0.4;
+      ctx.fillStyle = `rgba(255,255,255,${titleAlpha})`;
+      ctx.font = `500 11px ${FONT}`;
+      ctx.textAlign = 'left';
+      ctx.fillText(shortLabels[cluster], pad, pad - 20);
 
-      // Fade-out overlay for loop restart
-      if (s.fadeOut > 0) {
-        ctx.fillStyle = `rgba(0,0,0,${s.fadeOut})`;
+      // Fade-out overlay
+      if (sRef.fadeOut > 0) {
+        ctx.fillStyle = `rgba(0,0,0,${sRef.fadeOut})`;
         ctx.fillRect(0, 0, w, h);
       }
 
@@ -416,20 +464,18 @@ export default function PathwayAnimation() {
 
       PHASES.forEach((p, i) => {
         const bx = barStartX + i * (barW + barGap);
-        const isActive = p.key === s.phase;
-        const isPast = PHASES.findIndex(pp => pp.key === s.phase) > i;
+        const isActive = p.key === sRef.phase;
+        const isPast = PHASES.findIndex(pp => pp.key === sRef.phase) > i;
 
-        // Track background
         ctx.fillStyle = 'rgba(255,255,255,0.06)';
         ctx.beginPath();
         ctx.roundRect(bx, barY, barW, 4, 2);
         ctx.fill();
 
-        // Progress fill
         if (isActive || isPast) {
           const fillW = isPast ? barW : barW * t;
-          ctx.fillStyle = TEAL;
-          ctx.shadowColor = TEAL;
+          ctx.fillStyle = palette.full;
+          ctx.shadowColor = palette.full;
           ctx.shadowBlur = 4;
           ctx.beginPath();
           ctx.roundRect(bx, barY, fillW, 4, 2);
@@ -437,21 +483,20 @@ export default function PathwayAnimation() {
           ctx.shadowBlur = 0;
         }
 
-        // Label
-        ctx.fillStyle = isActive ? 'rgba(255,255,255,0.8)' : isPast ? 'rgba(62,207,178,0.6)' : 'rgba(255,255,255,0.25)';
+        ctx.fillStyle = isActive ? 'rgba(255,255,255,0.8)' : isPast ? palette.glow : 'rgba(255,255,255,0.25)';
         ctx.font = `500 9px ${FONT}`;
         ctx.textAlign = 'center';
         ctx.fillText(p.label, bx + barW / 2, barY + 18);
       });
 
-      // Pause icon hint (top-right)
-      if (!s.paused) {
+      // Pause hint / back hint
+      if (!sRef.paused) {
         ctx.fillStyle = 'rgba(255,255,255,0.15)';
         ctx.font = `9px ${FONT}`;
         ctx.textAlign = 'right';
         ctx.fillText('click to pause', w - 16, 20);
       } else {
-        ctx.fillStyle = TEAL;
+        ctx.fillStyle = palette.full;
         ctx.font = `bold 10px ${FONT}`;
         ctx.textAlign = 'center';
         ctx.fillText('▶  PAUSED', w / 2, h / 2);
@@ -462,14 +507,24 @@ export default function PathwayAnimation() {
 
     frameRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [reset]);
+  }, [cluster, reset, NODES, EDGES, TRAVERSAL_ORDER, palette, shortLabels]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      onClick={togglePause}
-      className="w-full aspect-[4/3] max-w-2xl cursor-pointer rounded-lg"
-      style={{ background: BG }}
-    />
+    <div className="relative w-full flex flex-col items-center">
+      <canvas
+        ref={canvasRef}
+        onClick={togglePause}
+        className="w-full aspect-[4/3] max-w-2xl cursor-pointer"
+        style={{ background: BG }}
+      />
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 text-xs font-mono px-3 py-1.5 rounded bg-secondary/60 hover:bg-secondary text-foreground/70 hover:text-foreground transition-all"
+        >
+          ← Back
+        </button>
+      )}
+    </div>
   );
 }
