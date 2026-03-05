@@ -206,8 +206,10 @@ export default function NetworkGraph({ pathways, onClusterSelect, selectedCluste
 
       if (labelAlpha <= 0.01) return;
 
+      // Find the lowest node in this cluster to place label below it
+      const maxY = Math.max(...p.nodes.map(n => n.y));
       const center = clusterCenters[p.color];
-      let lx = center.x, ly = center.y + 55;
+      let lx = center.x, ly = maxY + 25;
 
       ctx.fillStyle = `rgba(255,255,255,${labelAlpha * 0.5})`;
       ctx.font = `500 10px ${FONT}`;
