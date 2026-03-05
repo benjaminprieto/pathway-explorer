@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ClusterColor, CLUSTER_COLORS, CLUSTER_LABELS } from '@/data/pathwayData';
 
 interface PathwayAnimationProps {
@@ -155,12 +155,12 @@ export default function PathwayAnimation({ cluster = 'orange', onBack }: Pathway
   const TRAVERSAL_ORDER = TRAVERSAL_ORDERS[cluster];
   const palette = getClusterPalette(cluster);
 
-  const shortLabels: Record<ClusterColor, string> = {
+  const shortLabels: Record<ClusterColor, string> = useMemo(() => ({
     teal: 'PI3K / AKT',
     blue: 'MAPK / ERK',
     orange: 'WNT / β-catenin',
     purple: 'JAK / STAT',
-  };
+  }), []);
 
   const stateRef = useRef({
     phase: 'pathway' as Phase,
