@@ -143,17 +143,17 @@ export default function NetworkGraph({ pathways, onClusterSelect, selectedCluste
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.8 }}
-      className="relative w-full aspect-square max-w-[500px] mx-auto"
+      className="relative w-full flex flex-col items-center gap-4"
     >
       <canvas
         ref={canvasRef}
-        className="w-full h-full cursor-pointer rounded-lg"
+        className="w-full aspect-square max-w-[500px] cursor-pointer rounded-lg"
         onClick={handleCanvasClick}
         onMouseMove={handleCanvasMove}
         onMouseLeave={() => setHoveredCluster(null)}
       />
-      {/* Cluster labels */}
-      <div className="absolute top-4 left-4 flex flex-col gap-2">
+      {/* Cluster labels below the graph */}
+      <div className="flex flex-wrap justify-center gap-2">
         {pathways.map(p => (
           <button
             key={p.color}
